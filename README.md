@@ -35,4 +35,22 @@ Inspired by Sony DSEE HX, it uses a **non-deep-learning frequency enhancement al
 | 目标采样率 / Target sampling rate                 | 96000 Hz      | 输出音频采样率 / Output audio sample rate                                 |
 | 输出格式 / Output format                         | ALAC / FLAC   | 选择 Hi-Res 输出格式 / Choose Hi-Res output format                       |
 
+
+## 平台支持 / Platforms
+
+| 平台 / Paltform                               | 支持状态 / Support | 说明 / Description                                                   |
+| -------------------------------------------- | ------------- | ------------------------------------------------------------------ |
+| MacOS                                        | 否 / No       | 目前无 / Not at present                                        |
+| Unix                                         | 否 / No       | 目前无 / Not at present                                         |
+| Windows                                      | 是 / Yes     | 原生支持 / native                                              |
+| Linux                                        | 是 / Yes     | 使用Tkinter移植 / Transplant using tkinter                       |
+
+## 使用方法 / Methods
+
+* **安装Python3 / Install Python3**：python.org
+* **创建虚拟环境 / Create Virtual Environment**：python3 -m venv ~/audio_env | source ~/audio_env/bin/activate
+* **安装依赖 / Install Requirements**：pip install librosa resampy numpy soundfile scipy
+* **运行 / Run It**：WAV、MP3、FLAC、M4A 等 / python3 dsre.py | deactivate
+
+
 ---
