@@ -6,7 +6,7 @@
 >  
 > For a rebuild of the real Music Center DSEE HX filter (bit-level match on checked samples):  
 > 真正的 Music Center DSEE HX 滤镜重建（已对照样例上可位级一致）：  
-> **→ [REPLACE_WITH_NEW_REPO](https://github.com/x1aoqv/dsee_hx_re)**  
+> **→ [DSEE HX RE](https://github.com/x1aoqv/dsee_hx_re)**  
 >  
 > Looking for the old GUI / how to run DSRE? See [issue #1](https://github.com/x1aoqv/DSRE---Digital-Sound-Resolution-Enhancer/issues/1) — that UI belongs to **this** repo only, not the new one.  
 > 还在找旧界面 / 怎么跑 DSRE？见 [issue #1](https://github.com/x1aoqv/DSRE---Digital-Sound-Resolution-Enhancer/issues/1)——那是**本仓库**的界面，不是新库。
