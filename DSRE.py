@@ -15,6 +15,75 @@ import resampy
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtGui import QIcon, QTextCursor
 
+LANGUAGES = {
+    "English": {
+        "window_title": "DSRE v1.1.250908_beta",
+        "lbl_input_files": "Input files (list of files added)",
+        "btn_add": "Add input files",
+        "btn_clear": "Clear input list",
+        "lbl_out_dir": "Output directory",
+        "btn_outdir": "Choose output folder",
+        "lbl_ops": "Actions",
+        "lbl_params": "Parameter settings",
+        "row_m": "Modulation count",
+        "row_decay": "Decay amount",
+        "row_pre": "Pre-processing high-pass filter cutoff (Hz)",
+        "row_post": "Post-processing high-pass filter cutoff (Hz)",
+        "row_order": "Filter order",
+        "row_sr": "Target sample rate (Hz)",
+        "lbl_control": "Control",
+        "btn_start": "Start processing",
+        "btn_cancel": "Cancel processing",
+        "lbl_prog_file": "Current file progress",
+        "lbl_prog_all": "Overall progress",
+        "lbl_format": "Output encoding format",
+        "lbl_log": "Log",
+        "footer_dev": "Developed by: 匠乐几",
+        "footer_feedback": "Problem feedback: Le_Fan_Qv@outlook.com",
+        "footer_group": "QQ Group: 323861356",
+        "msg_init": "Initializing...",
+        "msg_start": "Starting processing {} files...",
+        "msg_done": "All files have been processed.",
+        "msg_cancel": "Canceling...",
+        "msg_error": "[Error]",
+        "msg_file_done": "Finished",
+        "lang_select": "Language"
+    },
+    "简体中文": {
+        "window_title": "DSRE v1.1.250908_beta",
+        "lbl_input_files": "输入文件",
+        "btn_add": "添加输入文件",
+        "btn_clear": "清空输入列表",
+        "lbl_out_dir": "输出目录",
+        "btn_outdir": "选择输出目录",
+        "lbl_ops": "操作",
+        "lbl_params": "参数设置",
+        "row_m": "调制次数",
+        "row_decay": "衰减幅度",
+        "row_pre": "预处理高通滤波器截止频率(Hz)",
+        "row_post": "后处理高通滤波器截止频率(Hz)",
+        "row_order": "滤波器阶数",
+        "row_sr": "目标采样率(Hz)",
+        "lbl_control": "控制",
+        "btn_start": "开始处理",
+        "btn_cancel": "取消处理",
+        "lbl_prog_file": "当前文件处理进度",
+        "lbl_prog_all": "全部文件处理进度",
+        "lbl_format": "输出编码格式",
+        "lbl_log": "日志",
+        "footer_dev": "软件制作：匠乐几",
+        "footer_feedback": "问题反馈：Le_Fan_Qv@outlook.com",
+        "footer_group": "交流群组：323861356（QQ）",
+        "msg_init": "正在初始化…",
+        "msg_start": "开始处理 {} 个文件…",
+        "msg_done": "所有文件均已完成处理",
+        "msg_cancel": "正在取消…",
+        "msg_error": "[错误]",
+        "msg_file_done": "处理完成",
+        "lang_select": "语言"
+    }
+}
+
 def add_ffmpeg_to_path():
     if hasattr(sys, "_MEIPASS"):  # 打包后的临时目录
         ffmpeg_dir = os.path.join(sys._MEIPASS, "ffmpeg")
@@ -198,7 +267,7 @@ class DSREWorker(QtCore.QThread):
 
             try:
                 # 读取
-                self.sig_log.emit(f"正在加载：{in_path}")
+                self.sig_log.emit(f"Loading: {in_path}")
                 y, sr = librosa.load(in_path, mono=False, sr=None)
 
                 # 对齐为 (ch, n)
@@ -207,7 +276,7 @@ class DSREWorker(QtCore.QThread):
                 # 重采样
                 target_sr = int(self.params["target_sr"])
                 if sr != target_sr:
-                    self.sig_log.emit(f"正在进行：{fname}: {sr} -> {target_sr}")
+                    self.sig_log.emit(f"Processing: {fname}: {sr} -> {target_sr}")
                     y = resampy.resample(y, sr, target_sr, filter='kaiser_fast')
                     sr = target_sr
 
@@ -235,13 +304,13 @@ class DSREWorker(QtCore.QThread):
                                         f"{base}.{self.params['format'].lower() if self.params['format'] == 'flac' else 'm4a'}")
                 out_path = save_wav24_out(in_path, y_out, sr, out_path, fmt=self.params['format'])
 
-                self.sig_log.emit(f"文件已保存：{out_path}")
+                self.sig_log.emit(f"Saved: {out_path}")
                 self.sig_file_done.emit(in_path, out_path)
 
             except Exception as e:
                 err = "".join(traceback.format_exception_only(type(e), e)).strip()
                 self.sig_error.emit(fname, err)
-                self.sig_log.emit(f"[错误] {fname}: {err}")
+                self.sig_log.emit(f"[Error] {fname}: {err}")
 
             done += 1
             self.sig_overall_progress.emit(done, total)
@@ -253,7 +322,7 @@ class DSREWorker(QtCore.QThread):
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("DSRE v1.1.250908_beta")
+        self.current_lang = "English"
 
         # 获取相对路径的图标
         icon_path = os.path.join(os.path.dirname(__file__), "logo.ico")
@@ -263,11 +332,10 @@ class MainWindow(QtWidgets.QWidget):
 
         # 文件列表
         self.list_files = QtWidgets.QListWidget()
-        self.btn_add = QtWidgets.QPushButton("添加输入文件")
-        self.btn_clear = QtWidgets.QPushButton("清空输入列表")
-        self.btn_outdir = QtWidgets.QPushButton("选择输出目录")
+        self.btn_add = QtWidgets.QPushButton()
+        self.btn_clear = QtWidgets.QPushButton()
+        self.btn_outdir = QtWidgets.QPushButton()
         self.le_outdir = QtWidgets.QLineEdit()
-        self.le_outdir.setPlaceholderText("Output folder")
         self.le_outdir.setText(os.path.abspath("output"))
 
         # 参数
@@ -295,41 +363,60 @@ class MainWindow(QtWidgets.QWidget):
         # 进度
         self.pb_file = QtWidgets.QProgressBar()    # 单文件进度
         self.pb_all = QtWidgets.QProgressBar()     # 全部进度
-        self.lbl_now = QtWidgets.QLabel("控制")
+        self.lbl_now = QtWidgets.QLabel()
 
         # 控制按钮
-        self.btn_start = QtWidgets.QPushButton("开始处理")
-        self.btn_cancel = QtWidgets.QPushButton("取消处理")
+        self.btn_start = QtWidgets.QPushButton()
+        self.btn_cancel = QtWidgets.QPushButton()
         self.btn_cancel.setEnabled(False)
 
         # 日志
         self.te_log = QtWidgets.QTextEdit()
         self.te_log.setReadOnly(True)
 
+        # 语言选择器
+        self.cb_lang = QtWidgets.QComboBox()
+        self.cb_lang.addItems(["English", "简体中文"])
+        self.cb_lang.currentTextChanged.connect(self.change_language)
+
+        # 动态文本标签引用
+        self.lbl_files_title = QtWidgets.QLabel()
+        self.lbl_ops_title = QtWidgets.QLabel()
+        self.lbl_outdir_title = QtWidgets.QLabel()
+        self.lbl_format_title = QtWidgets.QLabel()
+        self.lbl_params_title = QtWidgets.QLabel()
+        self.lbl_prog_file_title = QtWidgets.QLabel()
+        self.lbl_prog_all_title = QtWidgets.QLabel()
+        self.lbl_log_title = QtWidgets.QLabel()
+        self.lbl_lang_title = QtWidgets.QLabel()
+
         # ===== 布局 =====
         grid = QtWidgets.QGridLayout()
 
         # === 左列：输入文件 ===
         vleft = QtWidgets.QVBoxLayout()
-        lbl_files = QtWidgets.QLabel("输入文件")
-        lbl_files.setAlignment(QtCore.Qt.AlignHCenter)
-        vleft.addWidget(lbl_files)
+        self.lbl_files_title.setAlignment(QtCore.Qt.AlignHCenter)
+        vleft.addWidget(self.lbl_files_title)
         vleft.addWidget(self.list_files)
         grid.addLayout(vleft, 0, 0, 7, 1)
 
         # === 中列：操作 ===
         vmid = QtWidgets.QVBoxLayout()
-        lbl_ops = QtWidgets.QLabel("操作")
-        lbl_ops.setAlignment(QtCore.Qt.AlignHCenter)
-        vmid.addWidget(lbl_ops)
+        self.lbl_ops_title.setAlignment(QtCore.Qt.AlignHCenter)
+        vmid.addWidget(self.lbl_ops_title)
 
         vbtn = QtWidgets.QVBoxLayout()
         vbtn.addWidget(self.btn_add)
         vbtn.addWidget(self.btn_clear)
         vbtn.addSpacing(10)
-        vbtn.addWidget(QtWidgets.QLabel("输出目录"))
+        vbtn.addWidget(self.lbl_outdir_title)
         vbtn.addWidget(self.le_outdir)
         vbtn.addWidget(self.btn_outdir)
+        vbtn.addSpacing(10)
+        
+        # 语言控件位置
+        vbtn.addWidget(self.lbl_lang_title)
+        vbtn.addWidget(self.cb_lang)
         vbtn.addSpacing(20)
 
         # 把 lbl_now ("控制") 放在这里
@@ -342,7 +429,7 @@ class MainWindow(QtWidgets.QWidget):
         # 输出格式选择
         self.cb_format = QtWidgets.QComboBox()
         self.cb_format.addItems(["ALAC", "FLAC"])  # 两种可选格式
-        vbtn.addWidget(QtWidgets.QLabel("输出编码格式"))
+        vbtn.addWidget(self.lbl_format_title)
         vbtn.addWidget(self.cb_format)
 
         vmid.addLayout(vbtn)
@@ -350,32 +437,25 @@ class MainWindow(QtWidgets.QWidget):
 
         # === 右列：参数设置 + 进度 ===
         vright = QtWidgets.QVBoxLayout()
-        lbl_params = QtWidgets.QLabel("参数设置")
-        lbl_params.setAlignment(QtCore.Qt.AlignHCenter)
-        vright.addWidget(lbl_params)
+        self.lbl_params_title.setAlignment(QtCore.Qt.AlignHCenter)
+        vright.addWidget(self.lbl_params_title)
 
-        form = QtWidgets.QFormLayout()
-        form.addRow("调制次数:", self.sb_m)
-        form.addRow("衰减幅度:", self.dsb_decay)
-        form.addRow("预处理高通滤波器截止频率（Hz）:", self.sb_pre)
-        form.addRow("后处理高通滤波器截止频率（Hz）:", self.sb_post)
-        form.addRow("滤波器阶数:", self.sb_order)
-        form.addRow("目标采样率（Hz）:", self.sb_sr)
-        vright.addLayout(form)
+        self.form = QtWidgets.QFormLayout()
+        vright.addLayout(self.form)
 
         vright.addSpacing(20)
 
         vprog = QtWidgets.QVBoxLayout()
-        vprog.addWidget(QtWidgets.QLabel("当前文件处理进度"))
+        vprog.addWidget(self.lbl_prog_file_title)
         vprog.addWidget(self.pb_file)
-        vprog.addWidget(QtWidgets.QLabel("全部文件处理进度"))
+        vprog.addWidget(self.lbl_prog_all_title)
         vprog.addWidget(self.pb_all)
         vprog.addStretch(1)
         vright.addLayout(vprog)
         grid.addLayout(vright, 0, 2, 7, 1)
 
         # === 底部日志 ===
-        grid.addWidget(QtWidgets.QLabel("日志"), 7, 0)
+        grid.addWidget(self.lbl_log_title, 7, 0)
         grid.addWidget(self.te_log, 8, 0, 1, 3)
 
         self.setLayout(grid)
@@ -388,24 +468,59 @@ class MainWindow(QtWidgets.QWidget):
         self.btn_cancel.clicked.connect(self.on_cancel)
 
         self.worker: Optional[DSREWorker] = None
+        
+        # 初始化 UI 翻译
+        self.retranslate_ui()
+        self.append_log(LANGUAGES[self.current_lang]["footer_dev"])
+        self.append_log(LANGUAGES[self.current_lang]["footer_feedback"])
+        self.append_log(LANGUAGES[self.current_lang]["footer_group"])
 
-        # 初始化完成后写入欢迎信息
-        self.append_log("软件制作：屈乐凡")
-        self.append_log("问题反馈：Le_Fan_Qv@outlook.com")
-        self.append_log("交流群组：323861356（QQ）")
+    def retranslate_ui(self):
+        trans = LANGUAGES[self.current_lang]
+        self.setWindowTitle(trans["window_title"])
+        self.lbl_files_title.setText(trans["lbl_input_files"])
+        self.btn_add.setText(trans["btn_add"])
+        self.btn_clear.setText(trans["btn_clear"])
+        self.lbl_outdir_title.setText(trans["lbl_out_dir"])
+        self.btn_outdir.setText(trans["btn_outdir"])
+        self.lbl_ops_title.setText(trans["lbl_ops"])
+        self.lbl_now.setText(trans["lbl_control"])
+        self.btn_start.setText(trans["btn_start"])
+        self.btn_cancel.setText(trans["btn_cancel"])
+        self.lbl_format_title.setText(trans["lbl_format"])
+        self.lbl_params_title.setText(trans["lbl_params"])
+        self.lbl_prog_file_title.setText(trans["lbl_prog_file"])
+        self.lbl_prog_all_title.setText(trans["lbl_prog_all"])
+        self.lbl_log_title.setText(trans["lbl_log"])
+        self.lbl_lang_title.setText(trans["lang_select"])
+
+        # 更新 Form 布局中的标签
+        for i in reversed(range(self.form.count())): 
+            self.form.itemAt(i).widget().setParent(None)
+            
+        self.form.addRow(trans["row_m"], self.sb_m)
+        self.form.addRow(trans["row_decay"], self.dsb_decay)
+        self.form.addRow(trans["row_pre"], self.sb_pre)
+        self.form.addRow(trans["row_post"], self.sb_post)
+        self.form.addRow(trans["row_order"], self.sb_order)
+        self.form.addRow(trans["row_sr"], self.sb_sr)
+
+    def change_language(self, lang):
+        self.current_lang = lang
+        self.retranslate_ui()
 
     def on_add_files(self):
         filters = (
             "Audio Files (*.wav *.mp3 *.m4a *.flac *.ogg *.aiff *.aif *.aac *.wma *.mka);;"
             "All Files (*.*)"
         )
-        files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "选择的输入文件", "", filters)
+        files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Select input files", "", filters)
         for f in files:
             if f and (self.list_files.findItems(f, QtCore.Qt.MatchFlag.MatchExactly) == []):
                 self.list_files.addItem(f)
 
     def on_choose_outdir(self):
-        d = QtWidgets.QFileDialog.getExistingDirectory(self, "选择的输出目录", self.le_outdir.text() or "")
+        d = QtWidgets.QFileDialog.getExistingDirectory(self, "Select output directory", self.le_outdir.text() or "")
         if d:
             self.le_outdir.setText(d)
 
@@ -426,17 +541,18 @@ class MainWindow(QtWidgets.QWidget):
         self.te_log.moveCursor(QTextCursor.End)
 
     def on_start(self):
+        trans = LANGUAGES[self.current_lang]
         files = [self.list_files.item(i).text() for i in range(self.list_files.count())]
         if not files:
-            QtWidgets.QMessageBox.warning(self, "没有文件", "请至少添加一个输入文件")
+            QtWidgets.QMessageBox.warning(self, "Warning", trans["lbl_input_files"])
             return
         outdir = self.le_outdir.text().strip() or os.path.abspath("output")
 
         # 置零进度
         self.pb_all.setValue(0)
         self.pb_file.setValue(0)
-        self.lbl_now.setText("正在初始化…")
-        self.append_log(f"开始处理 {len(files)} 个文件…")
+        self.lbl_now.setText(trans["msg_init"])
+        self.append_log(trans["msg_start"].format(len(files)))
 
         # 锁定按钮
         self.btn_start.setEnabled(False)
@@ -455,7 +571,7 @@ class MainWindow(QtWidgets.QWidget):
 
     @QtCore.Slot(int, int, str)
     def on_file_progress(self, cur, total, fname):
-        self.lbl_now.setText(f"正在处理… [{cur}/{total}]: {fname}")
+        self.lbl_now.setText(f"Processing [{cur}/{total}]: {fname}")
         self.pb_file.setValue(0)
 
     @QtCore.Slot(int, str)
@@ -469,20 +585,23 @@ class MainWindow(QtWidgets.QWidget):
 
     @QtCore.Slot(str, str)
     def on_file_done(self, in_path, out_path):
-        self.append_log(f"处理完成: {os.path.basename(in_path)} -> {out_path}")
+        trans = LANGUAGES[self.current_lang]
+        self.append_log(f"{trans['msg_file_done']}: {os.path.basename(in_path)} -> {out_path}")
 
     @QtCore.Slot(str, str)
     def on_error(self, fname, err):
-        self.append_log(f"[错误] {fname}: {err}")
+        trans = LANGUAGES[self.current_lang]
+        self.append_log(f"{trans['msg_error']} {fname}: {err}")
 
     def on_cancel(self):
         if self.worker and self.worker.isRunning():
-            self.append_log("正在取消…")
+            self.append_log(LANGUAGES[self.current_lang]["msg_cancel"])
             self.worker.abort()
 
     def on_finished(self):
-        self.append_log("所有文件均已完成处理")
-        self.lbl_now.setText("控制")
+        trans = LANGUAGES[self.current_lang]
+        self.append_log(trans["msg_done"])
+        self.lbl_now.setText(trans["lbl_control"])
         self.btn_start.setEnabled(True)
         self.btn_cancel.setEnabled(False)
         self.worker = None
